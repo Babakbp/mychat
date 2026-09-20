@@ -128,7 +128,10 @@ export const api = {
 
   // Messages
   async getMessages(chatId: string): Promise<Message[]> {
-    const data = await safeFetchJson<{ messages: Message[] }>(`${API_BASE}/messages/${chatId}`);
+    if (!chatId || !chatId.trim()) {
+      return [];
+    }
+    const data = await safeFetchJson<{ messages: Message[] }>(`${API_BASE}/messages/${encodeURIComponent(chatId.trim())}`);
     return data.messages || [];
   },
 

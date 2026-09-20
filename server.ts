@@ -59,6 +59,11 @@ function normalizeDigits(str: any): string {
   return s;
 }
 
+// 0. Health check
+app.get(['/api', '/api/health'], (req, res) => {
+  res.json({ status: 'ok', app: 'School Chat', timestamp: new Date().toISOString() });
+});
+
 // 1. Auth: Login
 app.post('/api/auth/login', async (req, res) => {
   try {
@@ -163,7 +168,7 @@ app.get('/api/users', async (req, res) => {
 
 // 4. Principal reset / update teacher's password
 // Requirement: "مدیر قابلیت مشاهده رمز و ایجاد رمز جدید برای دبیران داشته باشد"
-app.post('/api/admin/users/:userId/password', async (req, res) => {
+app.post(['/api/admin/users/:userId/password', '/api/users/:userId/password'], async (req, res) => {
   try {
     const { userId } = req.params;
     const { newPassword } = req.body;
@@ -196,7 +201,7 @@ app.get('/api/groups', async (req, res) => {
 
 // 6. Principal defines new group
 // Requirement: "مدیر قابلیت تعریف گروه ... داشته باشد"
-app.post('/api/admin/groups', async (req, res) => {
+app.post(['/api/admin/groups', '/api/groups'], async (req, res) => {
   try {
     const { name, description, memberIds = [], isAnnouncementOnly = false, avatar } = req.body;
 
@@ -226,7 +231,7 @@ app.post('/api/admin/groups', async (req, res) => {
 
 // 7. Principal updates group membership
 // Requirement: "افراد را در گروه ها عضو کند"
-app.post('/api/admin/groups/:groupId/members', async (req, res) => {
+app.post(['/api/admin/groups/:groupId/members', '/api/groups/:groupId/members'], async (req, res) => {
   try {
     const { groupId } = req.params;
     const { memberIds } = req.body;
@@ -240,19 +245,29 @@ app.post('/api/admin/groups/:groupId/members', async (req, res) => {
     const finalMembers = Array.from(new Set([principalId, ...memberIds]));
 
     const updated = await DatabaseRepository.updateGroupMembers(groupId, finalMembers);
+    const groups = await DatabaseRepository.getGroups();
+    const updatedGroup = groups.find(g => g.id === groupId);
     broadcast('group:members_updated', { groupId, memberIds: updated });
 
-    res.json({ success: true, groupId, memberIds: updated });
+    res.json({ success: true, groupId, memberIds: updated, group: updatedGroup });
   } catch (error: any) {
     console.error('Update group members error:', error);
     res.status(500).json({ error: 'خطا در به‌روزرسانی اعضای گروه' });
   }
 });
 
-// 8. Messages: Get for chat
+// 8. Messages: Get for chat or empty
+app.get(['/api/messages', '/api/messages/'], (req, res) => {
+  res.json({ messages: [] });
+});
+
 app.get('/api/messages/:chatId', async (req, res) => {
   try {
-    const { chatId } = req.params;
+    const rawChatId = req.params.chatId;
+    if (!rawChatId || rawChatId.trim().length === 0) {
+      return res.json({ messages: [] });
+    }
+    const chatId = decodeURIComponent(rawChatId);
     const msgList = await DatabaseRepository.getMessages(chatId);
     res.json({ messages: msgList });
   } catch (error: any) {
@@ -329,7 +344,7 @@ app.post('/api/messages/:id/react', async (req, res) => {
 });
 
 // 12. Delete group
-app.delete('/api/admin/groups/:groupId', async (req, res) => {
+app.delete(['/api/admin/groups/:groupId', '/api/groups/:groupId'], async (req, res) => {
   try {
     const { groupId } = req.params;
     await DatabaseRepository.deleteGroup(groupId);
@@ -342,7 +357,7 @@ app.delete('/api/admin/groups/:groupId', async (req, res) => {
 });
 
 // Fallback for any unmatched /api/* requests so they ALWAYS return JSON, never HTML
-app.all('/api/*', (req, res) => {
+app.all(['/api', '/api/*'], (req, res) => {
   res.status(404).json({ error: 'سرویس یا مسیر درخواستی در سرور یافت نشد' });
 });
 
