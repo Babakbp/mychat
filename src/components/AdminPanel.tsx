@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, Group } from '../types';
 import { api } from '../services/api';
+import { toEnglishDigits } from '../utils/number';
 import { 
   ShieldCheck, 
   KeyRound, 
@@ -160,7 +161,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Direct Teacher Registration by Principal
   const handleAddStaffSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!directName.trim() || directCode.trim().length !== 8 || !/^09\d{9}$/.test(directMobile.trim())) {
+    const cleanCode = toEnglishDigits(directCode).replace(/\D/g, '').trim();
+    const cleanMobile = toEnglishDigits(directMobile).replace(/\D/g, '').trim();
+
+    if (!directName.trim() || cleanCode.length !== 8 || !/^09\d{9}$/.test(cleanMobile)) {
       alert('لطفاً نام کامل، کد پرسنلی ۸ رقمی و شماره موبایل ۱۱ رقمی معتبر را وارد کنید.');
       return;
     }
@@ -169,8 +173,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     try {
       await api.register({
         fullName: directName.trim(),
-        personnelCode: directCode.trim(),
-        mobile: directMobile.trim(),
+        personnelCode: cleanCode,
+        mobile: cleanMobile,
         subject: directSubject.trim() || 'دبیر آموزشی',
         password: directPassword.trim() || undefined,
       });
@@ -695,7 +699,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 type="text"
                 maxLength={8}
                 value={directCode}
-                onChange={(e) => setDirectCode(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => setDirectCode(toEnglishDigits(e.target.value).replace(/\D/g, ''))}
                 placeholder="مثال: 49821035"
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 font-mono text-left"
                 dir="ltr"
@@ -710,7 +714,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 type="text"
                 maxLength={11}
                 value={directMobile}
-                onChange={(e) => setDirectMobile(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => setDirectMobile(toEnglishDigits(e.target.value).replace(/\D/g, ''))}
                 placeholder="مثال: 09121234567"
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 font-mono text-left"
                 dir="ltr"

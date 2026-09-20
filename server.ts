@@ -47,6 +47,18 @@ wss.on('connection', (ws) => {
 // REST API Routes with Cloud SQL Database Persistence
 // ----------------------------------------------------
 
+function normalizeDigits(str: any): string {
+  if (!str) return '';
+  const p = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  const a = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  let s = str.toString().trim();
+  for (let i = 0; i < 10; i++) {
+    s = s.replace(new RegExp(p[i], 'g'), i.toString());
+    s = s.replace(new RegExp(a[i], 'g'), i.toString());
+  }
+  return s;
+}
+
 // 1. Auth: Login
 app.post('/api/auth/login', async (req, res) => {
   try {
@@ -56,7 +68,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'کد پرسنلی و رمز عبور الزامی هستند' });
     }
 
-    const normalizedCode = personnelCode.toString().trim();
+    const normalizedCode = normalizeDigits(personnelCode);
     const normalizedPass = password.toString().trim();
 
     let user = await DatabaseRepository.findUserByPersonnelCode(normalizedCode);
@@ -103,12 +115,12 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'لطفاً نام کامل، کد پرسنلی و شماره موبایل را وارد نمایید' });
     }
 
-    const cleanCode = personnelCode.toString().trim();
+    const cleanCode = normalizeDigits(personnelCode);
     if (cleanCode.length !== 8 || !/^\d{8}$/.test(cleanCode)) {
       return res.status(400).json({ error: 'کد پرسنلی باید دقیقاً ۸ رقم عددی باشد' });
     }
 
-    const cleanMobile = mobile.toString().trim();
+    const cleanMobile = normalizeDigits(mobile);
     if (!/^09\d{9}$/.test(cleanMobile)) {
       return res.status(400).json({ error: 'شماره موبایل باید با ۰۹ شروع شده و ۱۱ رقم باشد' });
     }
@@ -314,6 +326,30 @@ app.post('/api/messages/:id/react', async (req, res) => {
     console.error('Reaction error:', error);
     res.status(500).json({ error: 'خطا در ثبت واکنش' });
   }
+});
+
+// 12. Delete group
+app.delete('/api/admin/groups/:groupId', async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    await DatabaseRepository.deleteGroup(groupId);
+    broadcast('group:deleted', { groupId });
+    res.json({ success: true, groupId });
+  } catch (error: any) {
+    console.error('Delete group error:', error);
+    res.status(500).json({ error: 'خطا در حذف گروه' });
+  }
+});
+
+// Fallback for any unmatched /api/* requests so they ALWAYS return JSON, never HTML
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ error: 'سرویس یا مسیر درخواستی در سرور یافت نشد' });
+});
+
+// API Error Handler middleware
+app.use('/api', (err: any, req: any, res: any, next: any) => {
+  console.error('API Error:', err);
+  res.status(err.status || 500).json({ error: err.message || 'خطای سرور در پردازش درخواست' });
 });
 
 // ----------------------------------------------------

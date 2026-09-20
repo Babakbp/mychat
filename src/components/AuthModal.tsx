@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { api } from '../services/api';
+import { toEnglishDigits } from '../utils/number';
 import { 
   School, 
   KeyRound, 
@@ -51,7 +52,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!personnelCode.trim() || !password.trim()) {
+    const cleanCode = toEnglishDigits(personnelCode).replace(/\D/g, '').trim();
+    const cleanPass = password.trim();
+
+    if (!cleanCode || !cleanPass) {
       setError('لطفاً کد پرسنلی و رمز عبور را وارد کنید.');
       return;
     }
@@ -59,7 +63,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
     setError(null);
     setLoading(true);
     try {
-      const user = await api.login(personnelCode.trim(), password.trim());
+      const user = await api.login(cleanCode, cleanPass);
       onSuccess(user);
     } catch (err: any) {
       setError(err.message || 'خطا در ورود به سامانه');
@@ -72,17 +76,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
     e.preventDefault();
     setError(null);
 
-    if (!regFullName.trim() || !regPersonnelCode.trim() || !regMobile.trim()) {
+    const cleanPersonnelCode = toEnglishDigits(regPersonnelCode).replace(/\D/g, '').trim();
+    const cleanMobile = toEnglishDigits(regMobile).replace(/\D/g, '').trim();
+
+    if (!regFullName.trim() || !cleanPersonnelCode || !cleanMobile) {
       setError('نام، کد پرسنلی ۸ رقمی و شماره همراه الزامی است.');
       return;
     }
 
-    if (regPersonnelCode.trim().length !== 8 || !/^\d{8}$/.test(regPersonnelCode.trim())) {
+    if (cleanPersonnelCode.length !== 8 || !/^\d{8}$/.test(cleanPersonnelCode)) {
       setError('کد پرسنلی باید دقیقاً ۸ رقم عددی باشد.');
       return;
     }
 
-    if (!/^09\d{9}$/.test(regMobile.trim())) {
+    if (!/^09\d{9}$/.test(cleanMobile)) {
       setError('شماره موبایل نامعتبر است (باید با ۰۹ شروع شده و ۱۱ رقم باشد).');
       return;
     }
@@ -91,8 +98,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
     try {
       const user = await api.register({
         fullName: regFullName.trim(),
-        personnelCode: regPersonnelCode.trim(),
-        mobile: regMobile.trim(),
+        personnelCode: cleanPersonnelCode,
+        mobile: cleanMobile,
         subject: regSubject.trim() || 'دبیر آموزشی',
         password: regPassword.trim() || undefined,
       });
@@ -161,7 +168,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
                 type="text"
                 maxLength={8}
                 value={personnelCode}
-                onChange={(e) => setPersonnelCode(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => setPersonnelCode(toEnglishDigits(e.target.value).replace(/\D/g, ''))}
                 placeholder="مثال: 10001356"
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition-colors pr-9 text-left font-mono"
                 dir="ltr"
@@ -289,7 +296,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
                 type="text"
                 maxLength={8}
                 value={regPersonnelCode}
-                onChange={(e) => setRegPersonnelCode(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => setRegPersonnelCode(toEnglishDigits(e.target.value).replace(/\D/g, ''))}
                 placeholder="مثال: 56781234"
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-blue-500 font-mono text-left"
                 dir="ltr"
@@ -309,7 +316,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
                 type="text"
                 maxLength={11}
                 value={regMobile}
-                onChange={(e) => setRegMobile(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => setRegMobile(toEnglishDigits(e.target.value).replace(/\D/g, ''))}
                 placeholder="مثال: 09123456789"
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-blue-500 font-mono text-left"
                 dir="ltr"

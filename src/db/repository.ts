@@ -389,6 +389,18 @@ export class DatabaseRepository {
     }
   }
 
+  static async deleteGroup(groupId: string): Promise<boolean> {
+    try {
+      await db.delete(groupMembers).where(eq(groupMembers.groupId, groupId));
+      await db.delete(messages).where(eq(messages.chatId, groupId));
+      await db.delete(groups).where(eq(groups.id, groupId));
+      return true;
+    } catch (error) {
+      console.error('Failed to delete group in db:', error);
+      throw new Error('Database error deleting group', { cause: error });
+    }
+  }
+
   // Messages
   static async getMessages(chatId: string): Promise<Message[]> {
     try {
